@@ -5,10 +5,10 @@ The algorithm is based on the classic LZ77 compression scheme, with a sliding hi
 
 The compressed data is a series of tokens in this format:
 
-LIT = 00aaaaaa  next aaaaaa+1 bytes are literals
-BR0 = 01baaaaa  backref to offset aaaaa, length b+3
-EOF = 01x00000  end of file
-BR1 = 10bbbaaa'aaaaaaaa   backref to offset aaa'aaaaaaaa, length bbb+3
-BR2 = 11bbbbba'aaaaaaaa'aaaaaaaa   backref to offset a'aaaaaaaa'aaaaaaaa, length lookup_table[bbbbb]
+* _LIT = 00aaaaaa = next aaaaaa+1 bytes are literals   
+* BR0 = 01baaaaa = backref to offset aaaaa, length b+3
+* EOF = 01x00000 = end of file
+* BR1 = 10bbbaaa'aaaaaaaa =  backref to offset aaa'aaaaaaaa, length bbb+3
+* BR2 = 11bbbbba'aaaaaaaa'aaaaaaaa =  backref to offset a'aaaaaaaa'aaaaaaaa, length lookup_table[bbbbb]
 
 The length lookup table enables encoding of backrefs up to 256 bytes in length using only 5 bits, though some longer lengths can't be encoded directly. These are encoded as two successive backrefs, each with a smaller length.

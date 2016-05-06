@@ -1,0 +1,1 @@
+#ifndef _FC8_H_#define _FC8_H_#pragma parameter __D0 fc8_decode(__A0, __A1, __D1)asm unsigned short fc8_decode(unsigned char* in, unsigned char* out, unsigned long outsize);#endif

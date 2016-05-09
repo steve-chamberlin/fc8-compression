@@ -1,6 +1,25 @@
 /*
-* FC8 compression by Steve Chamberlin
-* Derived from liblzg by Marcus Geelnard
+* FC8 compression by Steve Chamberlin, 2016
+* Some concepts and code derived from liblzg by Marcus Geelnard, 2010
+*
+* This software is provided 'as-is', without any express or implied
+* warranty. In no event will the authors be held liable for any damages
+* arising from the use of this software.
+*
+* Permission is granted to anyone to use this software for any purpose,
+* including commercial applications, and to alter it and redistribute it
+* freely, subject to the following restrictions:
+*
+* 1. The origin of this software must not be misrepresented; you must not
+*    claim that you wrote the original software. If you use this software
+*    in a product, an acknowledgment in the product documentation would
+*    be appreciated but is not required.
+*
+* 2. Altered source versions must be plainly marked as such, and must not
+*    be misrepresented as being the original software.
+*
+* 3. This notice may not be removed or altered from any source
+*    distribution.
 */
 
 #include <stdlib.h>
@@ -61,12 +80,20 @@ const uint16_t _FC8_LENGTH_QUANT_LUT[257] = {
     256                                                              /* 256 */
 };
 
-uint32_t GetDecodedSize(const uint8_t *in)
+uint32_t GetUInt32(const uint8_t *in)
 {
-    return ((uint32_t)in[FC8_DECODED_SIZE_OFFSET]) << 24 |
-            ((uint32_t)in[FC8_DECODED_SIZE_OFFSET+1]) << 16 |
-            ((uint32_t)in[FC8_DECODED_SIZE_OFFSET+2]) << 8 |
-            ((uint32_t)in[FC8_DECODED_SIZE_OFFSET+3]);
+    return ((uint32_t)in[0]) << 24 |
+            ((uint32_t)in[1]) << 16 |
+            ((uint32_t)in[2]) << 8 |
+            ((uint32_t)in[3]);
+}
+
+void SetUInt32(uint8_t *in, uint32_t val)
+{
+    in[0] = val >> 24;
+    in[1] = val >> 16;
+    in[2] = val >> 8;
+    in[3] = val;
 }
 
 typedef struct {
@@ -338,6 +365,12 @@ uint32_t Encode(const uint8_t *in, uint32_t insize, uint8_t *out, uint32_t outsi
         }
     }
 
+    if (literalRunLength)
+    {
+        // terminate the final literal run, if any
+        *pRunLengthByte = literalRunLength-1;
+    }
+
     // insert EOF
     *dst++ = 0x40;
 
@@ -352,11 +385,7 @@ uint32_t Encode(const uint8_t *in, uint32_t insize, uint8_t *out, uint32_t outsi
     out[2] = '8';
     out[3] = '_';
 
-    /* Decoded buffer size */
-    out[4] = insize >> 24;
-    out[5] = insize >> 16;
-    out[6] = insize >> 8;
-    out[7] = insize;
+    SetUInt32(out + FC8_DECODED_SIZE_OFFSET, insize);
 
     /* Return size of compressed buffer */
     return compressedSize;
@@ -380,7 +409,7 @@ fail:
 
 uint32_t Decode(const uint8_t *in, uint32_t insize, uint8_t *out, uint32_t outsize)
 {
-    uint8_t *src, *inEnd, *dst, *outEnd, symbol, symbolType;
+    uint8_t *src, *dst, symbol, symbolType;
     uint32_t  i, length, offset;
 
     /* Does the input buffer at least contain the header? */
@@ -392,14 +421,12 @@ uint32_t Decode(const uint8_t *in, uint32_t insize, uint8_t *out, uint32_t outsi
         return 0;
 
     /* Get & check output buffer size */
-    if (outsize < GetDecodedSize(in))
+    if (outsize < GetUInt32(&in[FC8_DECODED_SIZE_OFFSET]))
         return 0;
 
     /* Initialize the byte streams */
     src = (unsigned char *)in;
-    inEnd = ((unsigned char *)in) + insize;
     dst = out;
-    outEnd = out + outsize;
     
     /* Skip header information */
     src += FC8_HEADER_SIZE;
